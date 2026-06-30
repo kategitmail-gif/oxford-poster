@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GIN / LiNGLaH — 3D latent-item graph</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0f1626; overflow: hidden;
+    font-family: "Helvetica Neue", Arial, sans-serif; }
+  #title { position: absolute; top: 16px; left: 0; right: 0; text-align: center;
+    color: #e8edf6; font-size: 18px; font-weight: 600; letter-spacing: .3px;
+    text-shadow: 0 1px 4px #000; pointer-events: none; }
+  #sub { font-size: 12px; color: #9fb0cc; font-weight: 400; margin-top: 4px; }
+  #legend { position: absolute; bottom: 16px; left: 16px; color: #cfd8e8;
+    font-size: 13px; background: rgba(15,22,38,.6); padding: 10px 13px;
+    border-radius: 8px; line-height: 1.7; }
+  .dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%;
+    margin-right: 7px; vertical-align: middle; }
+  #hint { position: absolute; bottom: 16px; right: 16px; color: #7f8ca6;
+    font-size: 11px; text-align: right; }
+  #btn { position:absolute; top:16px; right:16px; background:rgba(255,255,255,.1);
+    color:#cfd8e8; border:1px solid #3a4660;
+    border-radius:6px; padding:6px 11px; font-size:12px; cursor:pointer; }
+</style>
+</head>
+<body>
+<div id="title">GIN / LiNGLaH: latent–item structure (3D)
+  <div id="sub">L72 (Worry) · L74 (Mistrust A) · L75 (Mistrust B) — parallel latent dimensions</div>
+</div>
+<div id="legend">
+  <span class="dot" style="background:#e74c3c"></span>Latent factor<br>
+  <span class="dot" style="background:#5aa9e6"></span>Q72 (Worry)<br>
+  <span class="dot" style="background:#7ac74f"></span>Q74 (Mistrust A)<br>
+  <span class="dot" style="background:#f4a259"></span>Q75 (Mistrust B)
+</div>
+<div id="hint">drag to rotate · scroll to zoom · auto-spin on</div>
+<button id="btn">pause spin</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x0f1626, 0.012);
+
+const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.1, 1000);
+camera.position.set(0, 0, 60);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+const pl = new THREE.PointLight(0xffffff, 0.7); pl.position.set(40, 40, 60); scene.add(pl);
+
+const group = new THREE.Group();
+scene.add(group);
+
+const COL = { L:0xe74c3c, Q72:0x5aa9e6, Q74:0x7ac74f, Q75:0xf4a259 };
+
+// ---- data: latents + their items (reconstructed from the figure) ----
+const latents = {
+  L72: { pos:new THREE.Vector3(0, 6, 0),  color:COL.L },
+  L75: { pos:new THREE.Vector3(0, 0, 0),  color:COL.L },
+  L74: { pos:new THREE.Vector3(5,-5, 0),  color:COL.L },
+};
+const items = {
+  L72: ["Q72_4","Q72_5","Q72_6","Q72_7","Q72_8","Q72_9","Q72_10"].map(n=>({n,c:COL.Q72})),
+  L74: ["Q74_1","Q74_2","Q74_3","Q74_4","Q74_5","Q74_6","Q74_7","Q74_8"].map(n=>({n,c:COL.Q74})),
+  L75: ["Q75_1","Q75_3","Q75_5","Q75_6","Q75_7","Q75_9","Q75_10"].map(n=>({n,c:COL.Q75})),
+};
+
+// fibonacci sphere placement around a center
+function spherePoints(center, n, r){
+  const pts=[], off=2/n, inc=Math.PI*(3-Math.sqrt(5));
+  for(let i=0;i<n;i++){
+    const y=i*off-1+off/2, rr=Math.sqrt(1-y*y), phi=i*inc;
+    pts.push(new THREE.Vector3(Math.cos(phi)*rr, y, Math.sin(phi)*rr)
+      .multiplyScalar(r).add(center));
+  }
+  return pts;
+}
+
+function labelSprite(text, scale){
+  const cv=document.createElement('canvas'), s=256; cv.width=s; cv.height=128;
+  const ctx=cv.getContext('2d');
+  ctx.font='bold 44px Helvetica, Arial'; ctx.fillStyle='#fff';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.shadowColor='#000'; ctx.shadowBlur=6;
+  ctx.fillText(text, s/2, 64);
+  const tex=new THREE.CanvasTexture(cv);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true, depthTest:false}));
+  sp.scale.set(scale, scale*0.5, 1);
+  return sp;
+}
+
+function node(pos, color, radius, label, labelScale){
+  const m=new THREE.Mesh(
+    new THREE.SphereGeometry(radius, 32, 32),
+    new THREE.MeshPhongMaterial({color, shininess:60,
+      emissive:color, emissiveIntensity:0.25}));
+  m.position.copy(pos); group.add(m);
+  const lab=labelSprite(label, labelScale); lab.position.copy(pos);
+  lab.position.y += radius+1.4; group.add(lab);
+  return m;
+}
+
+function edge(a, b, color, op){
+  const g=new THREE.BufferGeometry().setFromPoints([a,b]);
+  const l=new THREE.Line(g, new THREE.LineBasicMaterial({color, transparent:true, opacity:op}));
+  group.add(l);
+}
+
+// build latents
+for(const k in latents){ node(latents[k].pos, latents[k].color, 2.4, k, 9); }
+
+// build items + edges to their latent
+for(const k in items){
+  const center=latents[k].pos;
+  const pts=spherePoints(center, items[k].length, 16);
+  items[k].forEach((it,i)=>{
+    node(pts[i], it.c, 1.15, it.n, 5);
+    edge(center, pts[i], 0x6b7a99, 0.5);
+  });
+}
+// inter-latent links (parallel: no direction) — subtle
+const Ls=Object.values(latents).map(l=>l.pos);
+edge(Ls[0],Ls[1],0xe74c3c,0.8); edge(Ls[1],Ls[2],0xe74c3c,0.8); edge(Ls[0],Ls[2],0xe74c3c,0.8);
+
+// center the group
+group.position.set(-1.5, -0.5, 0);
+
+// ---- interaction: drag rotate, scroll zoom, auto-spin ----
+let spin=true, dragging=false, px=0, py=0, rx=0, ry=0;
+const btn=document.getElementById('btn');
+btn.onclick=()=>{ spin=!spin; btn.textContent=spin?'pause spin':'resume spin'; };
+renderer.domElement.addEventListener('pointerdown',e=>{dragging=true;px=e.clientX;py=e.clientY;});
+addEventListener('pointerup',()=>dragging=false);
+addEventListener('pointermove',e=>{
+  if(!dragging)return;
+  ry+=(e.clientX-px)*0.005; rx+=(e.clientY-py)*0.005;
+  px=e.clientX; py=e.clientY;
+});
+addEventListener('wheel',e=>{
+  camera.position.z=Math.min(120, Math.max(25, camera.position.z+e.deltaY*0.05));
+},{passive:true});
+
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+function animate(){
+  requestAnimationFrame(animate);
+  if(spin && !dragging) ry+=0.004;
+  group.rotation.y=ry; group.rotation.x=rx;
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>
