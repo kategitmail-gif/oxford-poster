@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Oxford Trust Survey — IL2H latent structure</title>
+  <meta name="description" content="Interactive 3D latent-item structure, IL2H algorithm overview, and 3D Spearman correlation heatmap for the Oxford Trust Survey." />
+  <meta property="og:title" content="Oxford Trust Survey — Interactive IL2H Latent Structure" />
+  <meta property="og:description" content="Explore latent-item structure, IL2H clustering phases, and 3D Spearman correlations after QC." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://kategitmail-gif.github.io/oxford-poster/" />
+
+  <style>
+    :root{
+      --vh:1vh; --safe-top:env(safe-area-inset-top,0px); --safe-bottom:env(safe-area-inset-bottom,0px);
+      --ink:#16243f; --muted:#5a6b86; --soft:#eef2f8; --line:#dde4ef; --accent:#c0392b;
+      --worry:#2e6da4; --mistrust:#3d8b5f; --persecution:#d98032; --latent:#e74c3c;
+    }
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+    html,body{margin:0;width:100%;height:100%;min-height:calc(var(--vh)*100);overflow:hidden;overscroll-behavior:none;touch-action:none;-webkit-text-size-adjust:100%;font-family:"Helvetica Neue",Arial,sans-serif;color:var(--ink);background:radial-gradient(circle at 50% 38%,#fff 0%,#eef2f9 68%,#e4ebf5 100%);}
+    canvas{position:fixed;inset:0;width:100vw!important;height:calc(var(--vh)*100)!important;display:block;z-index:1;touch-action:none;}
+    button,input{font:inherit;} button{cursor:pointer;}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+
+    #fallback{display:none;position:fixed;inset:0;z-index:50;padding:28px;background:#fff;color:var(--ink);overflow:auto;text-align:center;}
+    #fallback .card{max-width:720px;margin:80px auto;padding:24px;border:1px solid var(--line);border-radius:16px;background:#f7f9fc;}
+
+    /* Intro */
+    #intro{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:calc(28px + var(--safe-top)) 24px calc(28px + var(--safe-bottom));overflow:auto;-webkit-overflow-scrolling:touch;background:linear-gradient(135deg,#f7f9fd 0%,#eef3fa 48%,#e5edf7 100%);text-align:left;}
+    .intro-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none;}
+    .orb{position:absolute;border-radius:50%;filter:blur(14px);opacity:.22;}
+    .orb-one{width:340px;height:340px;left:-90px;top:80px;background:#2e6da4;}
+    .orb-two{width:420px;height:420px;right:-120px;bottom:-80px;background:#c0392b;}
+    .grid-lines{position:absolute;inset:0;opacity:.22;background-image:linear-gradient(rgba(22,36,63,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(22,36,63,.08) 1px,transparent 1px);background-size:46px 46px;}
+    .intro-card{position:relative;width:min(900px,94vw);padding:34px 38px;border:1px solid rgba(221,228,239,.95);border-radius:22px;background:rgba(255,255,255,.9);box-shadow:0 20px 55px rgba(22,36,63,.13);backdrop-filter:blur(8px);}
+    .intro-kicker{margin:0 0 10px;color:var(--muted);font-size:12.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;}
+    #intro h1{max-width:780px;margin:0 0 14px;color:var(--ink);font-size:clamp(28px,4.4vw,42px);line-height:1.08;letter-spacing:-.035em;}
+    .intro-lead{max-width:790px;margin:10px 0;color:#34445d;font-size:16px;line-height:1.6;}
+    #intro .key{margin:20px 0 18px;padding:15px 18px;border-left:4px solid var(--accent);border-radius:14px;background:#f7f9fd;color:#2b3a53;font-size:15px;line-height:1.55;}
+    #intro .key b{color:var(--accent);}
+    .intro-actions{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+    #go{min-height:48px;padding:13px 30px;border:none;border-radius:26px;background:var(--ink);color:#fff;font-size:16px;font-weight:800;box-shadow:0 10px 26px rgba(22,36,63,.2);}
+    #go:hover{background:#243a5e;}
+    .intro-note{color:#6b7890;font-size:13px;}
+
+    /* Top UI */
+    #title{position:fixed;top:calc(10px + var(--safe-top));left:0;right:0;z-index:6;padding:0 88px;text-align:center;pointer-events:none;font-size:17px;font-weight:800;letter-spacing:-.01em;}
+    #sub{margin-top:2px;color:var(--muted);font-size:11.5px;font-weight:400;}
+    #ctl{position:fixed;top:calc(10px + var(--safe-top));right:12px;z-index:10;display:flex;gap:7px;align-items:center;}
+    .mini{min-width:36px;height:36px;padding:0 10px;border:1px solid var(--line);border-radius:9px;background:rgba(255,255,255,.94);color:var(--ink);display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;touch-action:manipulation;user-select:none;}
+    .mini:hover{background:var(--soft);} .mini.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+    #stats{position:fixed;top:calc(58px + var(--safe-top));left:12px;z-index:6;width:268px;max-width:calc(50vw - 18px);padding:12px 14px;border:1px solid var(--line);border-radius:13px;background:rgba(255,255,255,.94);font-size:12.5px;line-height:1.55;box-shadow:0 4px 14px rgba(22,36,63,.06);}
+    #stats .row{margin:3px 0;} #stats .hl{color:var(--accent);font-weight:800;}
+    #legend{position:fixed;top:calc(58px + var(--safe-top));right:12px;z-index:6;padding:9px 11px;border:1px solid var(--line);border-radius:13px;background:rgba(255,255,255,.94);font-size:12.5px;line-height:1.85;box-shadow:0 4px 14px rgba(22,36,63,.06);user-select:none;}
+    .lg{display:block;padding:2px 4px;border-radius:6px;cursor:pointer;} .lg:hover{background:#f0f3f8;} .lg.off{opacity:.36;text-decoration:line-through;}
+    .dot{display:inline-block;width:11px;height:11px;margin-right:7px;border-radius:50%;vertical-align:middle;}
+    #search{position:fixed;top:calc(118px + var(--safe-top));left:50%;transform:translateX(-50%);z-index:7;width:270px;max-width:62vw;height:38px;padding:8px 14px;border:1px solid #cdd5e3;border-radius:20px;outline:none;background:#fff;color:var(--ink);font-size:14px;box-shadow:0 2px 8px rgba(22,36,63,.08);touch-action:manipulation;}
+    #search:focus{border-color:#2e6da4;box-shadow:0 0 0 3px rgba(46,109,164,.12);}
+    #modeLabel{position:fixed;left:50%;top:calc(162px + var(--safe-top));transform:translateX(-50%);z-index:6;padding:7px 13px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.92);color:#34445d;font-size:12.5px;font-weight:800;box-shadow:0 4px 14px rgba(22,36,63,.07);pointer-events:none;}
+    #banner{position:fixed;left:0;right:0;bottom:calc(104px + var(--safe-bottom));z-index:6;text-align:center;pointer-events:none;}
+    #banner .b{display:inline-block;max-width:88vw;padding:10px 18px;border-radius:24px;background:var(--ink);color:#fff;opacity:0;transform:translateY(6px);transition:.24s ease;font-size:14.5px;line-height:1.35;box-shadow:0 5px 18px rgba(0,0,0,.16);}
+    #banner.show .b{opacity:1;transform:translateY(0);} #banner .b.big{background:var(--accent);font-size:16px;font-weight:800;}
+    #story{position:fixed;left:0;right:0;bottom:calc(14px + var(--safe-bottom));z-index:7;display:flex;justify-content:center;gap:8px;flex-wrap:wrap;padding:0 10px;}
+    .step{min-height:40px;padding:9px 15px;border:1px solid var(--line);border-radius:22px;background:var(--soft);color:#3a4a63;font-size:13px;font-weight:800;white-space:nowrap;touch-action:manipulation;}
+    .step:hover{background:#e2e9f3;} .step.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+    #tip{position:fixed;z-index:25;max-width:min(360px,86vw);max-height:42vh;overflow:auto;padding:11px 13px;border-radius:10px;background:var(--ink);color:#fff;opacity:0;pointer-events:none;transition:opacity .12s;box-shadow:0 6px 18px rgba(0,0,0,.2);font-size:13px;line-height:1.45;-webkit-overflow-scrolling:touch;}
+    #tip .ttl{margin-bottom:4px;font-size:14px;font-weight:800;} #tip .meta{margin-top:5px;color:#b9c9e6;font-size:11.5px;} #tip .load{display:inline-block;margin-top:7px;padding:2px 8px;border-radius:10px;background:#2a3a5a;font-size:11px;} #tip .x{position:absolute;top:6px;right:9px;color:#b9c9e6;cursor:pointer;font-size:16px;}
+    #hints{position:fixed;left:0;right:0;bottom:calc(150px + var(--safe-bottom));z-index:6;text-align:center;pointer-events:none;transition:opacity .5s;}
+    #hints .chip{display:inline-block;margin:2px 4px;padding:6px 12px;border-radius:16px;background:rgba(22,36,63,.9);color:#fff;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,.14);}
+
+    /* Panels */
+    .panel-backdrop{position:fixed;inset:0;z-index:19;display:none;background:rgba(22,36,63,.18);} .panel-backdrop.open{display:block;}
+    #browser,#algorithmPanel{position:fixed;top:0;bottom:0;left:0;z-index:20;padding:calc(22px + var(--safe-top)) 18px calc(32px + var(--safe-bottom));overflow-y:auto;-webkit-overflow-scrolling:touch;transform:translateX(-104%);transition:transform .25s ease;background:rgba(255,255,255,.98);box-shadow:4px 0 26px rgba(0,0,0,.16);touch-action:pan-y;}
+    #browser.open,#algorithmPanel.open{transform:translateX(0);}
+    #browser{width:300px;max-width:86vw;} #algorithmPanel{width:min(760px,92vw);}
+    .close{position:absolute;top:calc(10px + var(--safe-top));right:12px;border:0;background:transparent;color:#8a93a6;font-size:24px;cursor:pointer;}
+    #browser h3,#algorithmPanel h3{margin:0 34px 12px 0;color:var(--ink);line-height:1.16;letter-spacing:-.02em;}
+    #browser h3{font-size:16px;} #algorithmPanel h3{font-size:24px;}
+    .panel-kicker{margin:0 0 8px;color:var(--muted);font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;}
+    .panel-lead{max-width:680px;margin:0 0 18px;color:#34445d;font-size:14.5px;line-height:1.55;}
+    .phase-table{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#fff;}
+    .phase-row{display:grid;grid-template-columns:220px 1fr;border-bottom:1px solid var(--line);} .phase-row:last-child{border-bottom:none;}
+    .phase-name{padding:16px 18px;border-right:1px solid var(--line);background:#f7f9fd;color:var(--ink);font-size:15px;font-weight:800;line-height:1.28;}
+    .phase-name span{display:block;margin-bottom:4px;color:var(--accent);font-size:13px;text-transform:uppercase;letter-spacing:.04em;}
+    .phase-desc{padding:16px 18px;color:#2f3f58;font-size:14px;line-height:1.58;}
+    .math{white-space:nowrap;font-family:"Times New Roman",serif;font-style:italic;}
+    .algorithm-note{margin-top:16px;padding:14px 16px;border-left:4px solid var(--accent);border-radius:12px;background:#f7f9fd;color:#2f3f58;font-size:14px;line-height:1.55;}
+    .algorithm-note b{color:var(--ink);}
+    .grp{margin-top:12px;} .gh{padding:5px 8px;border-radius:8px;color:#fff;font-size:12.5px;font-weight:800;}
+    .it{display:block;width:100%;min-height:42px;margin:5px 0;padding:8px 10px;border:1px solid #e6ebf3;border-radius:9px;background:#f5f7fb;color:var(--ink);text-align:left;font-size:12.5px;line-height:1.25;touch-action:manipulation;} .it:hover{background:#e9eff8;} .it .q{display:block;margin-top:3px;color:var(--muted);font-size:11px;}
+
+    @media(max-width:760px),(pointer:coarse){
+      #ctl{top:calc(6px + var(--safe-top));left:8px;right:8px;justify-content:flex-start;overflow-x:auto;overflow-y:hidden;padding-bottom:4px;scrollbar-width:none;-webkit-overflow-scrolling:touch;} #ctl::-webkit-scrollbar{display:none;}
+      .mini{flex:0 0 auto;min-width:42px;height:40px;border-radius:10px;background:rgba(255,255,255,.96);}
+      #title{top:calc(54px + var(--safe-top));padding:0 12px;font-size:14px;line-height:1.2;} #sub{display:none;}
+      #search{top:calc(88px + var(--safe-top));width:calc(100vw - 28px);max-width:430px;height:40px;font-size:16px;}
+      #modeLabel{top:calc(132px + var(--safe-top));max-width:92vw;text-align:center;font-size:11.5px;}
+      #stats{top:auto;left:8px;bottom:calc(90px + var(--safe-bottom));max-width:47vw;padding:8px 9px;font-size:10.4px;line-height:1.32;}
+      #legend{top:auto;right:8px;bottom:calc(90px + var(--safe-bottom));max-width:47vw;padding:7px 8px;font-size:10.8px;line-height:1.6;}
+      #story{justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;bottom:calc(10px + var(--safe-bottom));padding:0 8px 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch;} #story::-webkit-scrollbar{display:none;}
+      .step{flex:0 0 auto;min-height:40px;padding:10px 13px;font-size:12.5px;}
+      #banner{bottom:calc(148px + var(--safe-bottom));} #banner .b{max-width:92vw;padding:9px 12px;font-size:12.5px;} #banner .b.big{font-size:13.5px;}
+      #hints{bottom:calc(198px + var(--safe-bottom));padding:0 8px;} #hints .chip{padding:5px 8px;font-size:11px;}
+      #intro{align-items:flex-start;padding-left:18px;padding-right:18px;} .intro-card{margin-top:20px;padding:26px 20px;} #intro h1{font-size:27px;} .intro-lead{font-size:14.5px;} #go{width:100%;}
+      #algorithmPanel{width:94vw;padding-left:16px;padding-right:16px;} #algorithmPanel h3{font-size:20px;} .phase-row{grid-template-columns:1fr;} .phase-name{border-right:none;border-bottom:1px solid var(--line);} .phase-desc{font-size:13.5px;}
+    }
+  </style>
+</head>
+<body>
+  <div id="fallback"><div class="card"><h2>Interactive view unavailable</h2><p>This browser does not appear to support WebGL.</p><p><b>Main interpretation:</b> the IL2H-style clustering structure is coherent, but the orientation evidence does not support a stable hierarchy. The constructs are interpreted as parallel latent dimensions.</p></div></div>
+
+  <main aria-label="Interactive Oxford Trust Survey IL2H latent item structure">
+    <section id="intro" aria-labelledby="intro-title">
+      <div class="intro-bg" aria-hidden="true"><div class="orb orb-one"></div><div class="orb orb-two"></div><div class="grid-lines"></div></div>
+      <div class="intro-card">
+        <p class="intro-kicker">Interactive supplement · Oxford Trust Survey</p>
+        <h1 id="intro-title">Exploring whether latent mental-health dimensions form a hierarchy</h1>
+        <p class="intro-lead">This interactive visualisation presents the recovered latent-item structure from the Oxford Trust Survey and connects it to the <b>IL2H clustering framework</b>.</p>
+        <p class="intro-lead">The display shows where items cluster, how the IL2H algorithm is organised, and why the subsequent orientation analysis does not support a stable hierarchy among <b>Worry</b>, <b>Mistrust</b>, and <b>Persecution</b>.</p>
+        <div class="key"><b>Main interpretation:</b> the IL2H-style clustering structure is coherent, but the orientation evidence is not stable enough to support a directed hierarchy. The three constructs are therefore interpreted as <b>parallel latent dimensions</b>.</div>
+        <div class="intro-actions"><button id="go" type="button">Explore the structure</button><span class="intro-note">Rotate · zoom · tap nodes to inspect items, loadings, and correlations</span></div>
+      </div>
+    </section>
+
+    <header id="title">Latent-item structure and orientation analysis — Oxford Trust Survey<div id="sub">node size = factor loading · IL2H orientation · Rank Constraints · Corr 3D after QC</div></header>
+
+    <nav id="ctl" aria-label="Interactive controls">
+      <button class="mini" id="browseBtn" type="button" title="Browse all survey items">☰ Items</button>
+      <button class="mini" id="algorithmBtn" type="button" title="Show IL2H algorithm">IL2H</button>
+      <button class="mini" id="corrBtn" type="button" title="Show 3D correlation heatmap">Corr 3D</button>
+      <button class="mini" id="labelsBtn" type="button" title="Toggle labels">Aa</button>
+      <button class="mini" id="play" type="button" title="Play explanatory tour">▶ Play</button>
+      <button class="mini" id="spinbtn" type="button" title="Pause/resume rotation">⏸</button>
+      <button class="mini" id="reset" type="button" title="Reset view">⟳</button>
+      <button class="mini" id="share" type="button" title="Copy page link">🔗</button>
+      <button class="mini" id="help" type="button" title="Show introduction">?</button>
+    </nav>
+
+    <aside id="stats" aria-label="Statistical summary">
+      <div class="row"><b>Oxford Trust Survey</b></div>
+      <div class="row">n = <b>10,382</b> · 3 latents · 28 displayed items</div>
+      <div class="row">Method: <b>IL2H / LiNGLaH-style orientation</b></div>
+      <div class="row">Constraint logic: <b>Rank Constraints</b></div>
+      <div class="row">Measurement: <b>strong</b>, S<sub>s</sub> ≈ 0.85</div>
+      <div class="row">Orientation: <span class="hl">symmetric evidence</span></div>
+      <div class="row">Conclusion: <span class="hl">parallel dimensions</span></div>
+    </aside>
+
+    <aside id="legend" aria-label="Legend">
+      <span class="lg" data-c="Worry"><span class="dot" style="background:var(--worry)"></span>Worry Q72</span>
+      <span class="lg" data-c="MistrustA"><span class="dot" style="background:var(--mistrust)"></span>Mistrust A Q74</span>
+      <span class="lg" data-c="Persecution"><span class="dot" style="background:var(--persecution)"></span>Persecution Q75</span>
+      <span class="lg" data-c="__lat"><span class="dot" style="background:var(--latent)"></span>Latent construct</span>
+    </aside>
+
+    <label class="sr-only" for="search">Search survey items</label><input id="search" placeholder="Search: sleep, hurt, fear..." autocomplete="off" />
+    <div id="modeLabel" aria-live="polite">Latent-item structure</div>
+    <div id="banner" aria-live="polite"><span class="b"></span></div>
+
+    <nav id="story" aria-label="Explanation stages">
+      <button class="step active" type="button" data-stage="measurement">1 Measurement</button>
+      <button class="step" type="button" data-stage="orientation">2 Orientation?</button>
+      <button class="step" type="button" data-stage="result">3 Result</button>
+      <button class="step" type="button" data-stage="free">Free explore</button>
+    </nav>
+
+    <div id="tip" role="dialog" aria-live="polite"></div>
+
+    <div id="panelBackdrop" class="panel-backdrop"></div>
+
+    <aside id="browser" aria-label="Survey item browser">
+      <button class="close" id="browserClose" type="button" aria-label="Close item browser">×</button>
+      <h3>Browse survey items</h3>
+      <div style="font-size:12px;color:#5a6b86;">Tap any item to highlight it in the 3D structure.</div>
+      <div id="browserBody"></div>
+    </aside>
+
+    <aside id="algorithmPanel" aria-label="IL2H algorithm overview">
+      <button class="close" id="algorithmClose" type="button" aria-label="Close IL2H algorithm panel">×</button>
+      <p class="panel-kicker">Methodological overview</p>
+      <h3>Overview of the IL2H model and clustering algorithm</h3>
+      <p class="panel-lead">Based on the theoretical structure of IL2H, the algorithm proceeds in three phases: identifying candidate causal clusters, refining those clusters, and correcting edge assignments within the recovered latent structure.</p>
+      <div class="phase-table">
+        <div class="phase-row"><div class="phase-name"><span>Phase 1</span>Finding causal clusters</div><div class="phase-desc">Using a greedy search, this phase detects clusters of observed variables likely sharing a latent ancestor. It performs rank-deficiency tests on subsets of variables. The active set <span class="math">S<sub>a</sub> ⊆ X<sub>G</sub></span> starts as the full observed variable set and shrinks as latent covers are identified.</div></div>
+        <div class="phase-row"><div class="phase-name"><span>Phase 2</span>Refining clusters</div><div class="phase-desc">Clusters obtained in Phase 1 may be inaccurate due to the greedy heuristic, especially when they correspond to bond sets or subsets of variables that induce spurious clustering. Corrective operations are used to remove bond sets and obtain latent atomic covers that better reflect the underlying latent structure.</div></div>
+        <div class="phase-row"><div class="phase-name"><span>Phase 3</span>Refining edges</div><div class="phase-desc">Having identified latent clusters, this phase corrects edge assignments within clusters so that conditional independence assumptions are met. It addresses residual dependencies among children of latent nodes or incorrect parent assignments.</div></div>
+      </div>
+      <div class="algorithm-note"><b>Connection to this visualisation:</b> the 3D display shows the recovered latent-item structure, while the orientation stage illustrates why the final interpretation is parallel dimensionality rather than a stable hierarchy.</div>
+    </aside>
+
+    <div id="hints"><span class="chip">Drag to rotate</span><span class="chip">Tap a node</span><span class="chip">Open IL2H or Corr 3D</span></div>
+  </main>
+
+  <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+  <script>
+    function hasWebGL(){try{const c=document.createElement('canvas');return !!(window.WebGLRenderingContext&&(c.getContext('webgl')||c.getContext('experimental-webgl')));}catch(e){return false;}}
+    if(!hasWebGL()) document.getElementById('fallback').style.display='block';
+    const isCoarse=matchMedia('(pointer: coarse)').matches;
+    function viewportW(){return document.documentElement.clientWidth||window.innerWidth;} function viewportH(){return Math.round((window.visualViewport&&window.visualViewport.height)||window.innerHeight||document.documentElement.clientHeight);} function setVH(){document.documentElement.style.setProperty('--vh',viewportH()*0.01+'px');} setVH();
+
+    const scene=new THREE.Scene(); const camera=new THREE.PerspectiveCamera(55,viewportW()/viewportH(),0.1,3000); camera.position.set(0,0,70);
+    const renderer=new THREE.WebGLRenderer({antialias:!isCoarse,alpha:true,powerPreference:'high-performance'}); renderer.setSize(viewportW(),viewportH(),false); renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,isCoarse?1.5:2)); document.body.appendChild(renderer.domElement);
+    scene.add(new THREE.AmbientLight(0xffffff,.9)); const pointLight=new THREE.PointLight(0xffffff,.45); pointLight.position.set(40,40,60); scene.add(pointLight);
+    const group=new THREE.Group(); group.position.set(0,-.5,0); scene.add(group);
+    const corrGroup=new THREE.Group(); corrGroup.visible=false; corrGroup.position.set(0,-3,0); scene.add(corrGroup);
+    const isMobile=viewportW()<700||isCoarse;
+    const COL={L:0xe74c3c,Worry:0x2e6da4,MistrustA:0x3d8b5f,Persecution:0xd98032}; function rad(load){return (isMobile?1:.85)+(load-.75)*4.2;}
+
+    const latents={Worry:{label:'WORRY',pos:new THREE.Vector3(0,9,0),full:'Worry — Dunn Worry Questionnaire DWQ'},MistrustA:{label:'MISTRUST A',pos:new THREE.Vector3(8,-6,0),full:'Mistrust — exaggerated fears of others, Part A'},Persecution:{label:'PERSECUTION',pos:new THREE.Vector3(-8,-6,0),full:'Persecutory ideation — R-GPTS Part B'}};
+    const items={
+      Worry:[['worry item 1','Dunn Worry item 1, text truncated in dataset',.85],['going over problems','In my mind I have been going over problems again and again.',.87],['could not stop','There was little I could do to stop worrying.',.84],['worried unwillingly','I have been worrying even though I did not want to.',.88],['lost focus','Worry has stopped me focusing on important things in my day.',.86],['worry and sleep','Worry has stopped me sleeping.',.80],['worry and upset','Worry has caused me to feel upset.',.88],['worry and stress','Worry has made me feel stressed.',.90],['worry and anxiety','Worry has made me feel anxious.',.90],['worry and hopelessness','Worry has made me feel hopeless.',.85]].map(([s,f,l])=>({s,f,l,c:COL.Worry,scale:'None of the time to all of the time'})),
+      MistrustA:[['self-trust','I would describe myself as trusting to mistrustful of others.',.85],['fear: embarrass','Exaggerated fears that others may try to embarrass me.',.83],['fear: reputation','Exaggerated fears that others may try to ruin my reputation.',.85],['fear: steal','Exaggerated fears that others may try to steal from me.',.87],['fear: harm','Exaggerated fears that others may try to physically harm me.',.85],['over-fearful','I feel more fearful of what others may do to me than I should.',.85],['help: fears','I would like help to reduce fears that others may harm me.',.75],['help: trust','I would like help to be more trusting of other people.',.84]].map(([s,f,l])=>({s,f,l,c:COL.MistrustA,scale:'Not at all to often'})),
+      Persecution:[['had it in for me','Certain individuals have had it in for me.',.83],['stared to threaten','People wanted me to feel threatened, so they stared at me.',.88],['annoy me','I was certain people did things in order to annoy me.',.82],['conspiracy','I was convinced there was a conspiracy against me.',.88],['wanted to hurt me','I was sure someone wanted to hurt me.',.89],['confuse me','I could not stop thinking about people wanting to confuse me.',.88],['persecuted','I was distressed by being persecuted.',.89],['make me feel bad','Difficult to stop thinking about people wanting to make me feel bad.',.90],['hostile on purpose','People have been hostile towards me on purpose.',.88],['angry: hurt me','I was angry that someone wanted to hurt me.',.88]].map(([s,f,l])=>({s,f,l,c:COL.Persecution,scale:'Not at all to daily'}))
+    };
+
+    function spherePoints(center,n,r){const pts=[];const off=2/n;const inc=Math.PI*(3-Math.sqrt(5));for(let i=0;i<n;i++){const y=i*off-1+off/2;const rr=Math.sqrt(1-y*y);const phi=i*inc;pts.push(new THREE.Vector3(Math.cos(phi)*rr,y,Math.sin(phi)*rr).multiplyScalar(r).add(center));}return pts;}
+    function labelSprite(text,px,bold,color='#16243f'){const cv=document.createElement('canvas');const ctx=cv.getContext('2d');const font=(bold?'bold ':'')+px+'px Helvetica, Arial';ctx.font=font;const pad=8;const w=Math.ceil(ctx.measureText(text).width)+pad*2;const h=px+pad*2;cv.width=w;cv.height=h;const c=cv.getContext('2d');c.font=font;c.textAlign='center';c.textBaseline='middle';c.lineWidth=5;c.strokeStyle='rgba(255,255,255,.94)';c.strokeText(text,w/2,h/2);c.fillStyle=color;c.fillText(text,w/2,h/2);const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthTest:false,opacity:0}));const s=.045;sp.scale.set(w*s,h*s,1);return sp;}
+    const reveal=[],pickable=[],allNodes=[],allEdges=[],allLabels=[],latNode={},itemNodeList=[];
+    function makeNode(pos,color,radius,cluster,kind,short,full,labelPx,bold,extra){const mesh=new THREE.Mesh(new THREE.SphereGeometry(radius,28,28),new THREE.MeshPhongMaterial({color,shininess:50,emissive:color,emissiveIntensity:.15,transparent:true,opacity:1}));mesh.position.copy(pos);mesh.scale.setScalar(.001);mesh.visible=false;mesh.userData=Object.assign({target:1,appear:-1,cluster,kind,short,full,color,radius,edges:[]},extra||{});group.add(mesh);pickable.push(mesh);allNodes.push(mesh);const lab=labelSprite(short,labelPx,bold);let dir=pos.clone().sub(latents[cluster]?latents[cluster].pos:new THREE.Vector3());if(dir.length()<.01)dir.set(0,1,0);dir.normalize();lab.position.copy(pos).add(dir.multiplyScalar(radius+(bold?1.6:1.1)));lab.position.y+=bold?1.1:.5;lab.userData={cluster,appear:-1};group.add(lab);allLabels.push(lab);mesh.userData.label=lab;return mesh;}
+    function makeEdge(a,b,color,opacity,cluster){const geometry=new THREE.BufferGeometry().setFromPoints([a,b]);const line=new THREE.Line(geometry,new THREE.LineBasicMaterial({color,transparent:true,opacity:0}));line.visible=false;line.userData={base:opacity,appear:-1,cluster};group.add(line);allEdges.push(line);return line;}
+    for(const k in latents){const node=makeNode(latents[k].pos,COL.L,2.8,k,'latent',latents[k].label,latents[k].full,30,true);latNode[k]=node;reveal.push({node});}
+    const Lk=Object.keys(latents),Lp=Lk.map(k=>latents[k].pos); [[0,1],[1,2],[0,2]].forEach(([i,j])=>{const edge=makeEdge(Lp[i],Lp[j],0x111111,.5,'__inter');reveal.push({edge});});
+    for(const k in items){const center=latents[k].pos;const pts=spherePoints(center,items[k].length,16);items[k].forEach((it,i)=>{const node=makeNode(pts[i],it.c,rad(it.l),k,'item',it.s,it.f,18,false,{loading:it.l,scale:it.scale});const edge=makeEdge(center,pts[i],0x111111,.4+it.l*.4,k);node.userData.edges.push(edge);reveal.push({node,edge});itemNodeList.push({cluster:k,short:it.s,full:it.f,node});});}
+
+    const orientGroup=new THREE.Group();orientGroup.visible=false;group.add(orientGroup);function coneAt(pos,dir,color){const cone=new THREE.Mesh(new THREE.ConeGeometry(.85,2.1,18),new THREE.MeshPhongMaterial({color,emissive:color,emissiveIntensity:.2}));cone.position.copy(pos);cone.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.clone().normalize());return cone;} function biArrow(a,b){const g=new THREE.Group();const dir=b.clone().sub(a);const len=dir.length();dir.normalize();g.add(coneAt(a.clone().add(dir.clone().multiplyScalar(len*.74)),dir,0xc0392b));g.add(coneAt(b.clone().add(dir.clone().multiplyScalar(-len*.74)),dir.clone().negate(),0xc0392b));const mid=a.clone().add(b).multiplyScalar(.5);const lab=labelSprite('p=0.007 both ways',17,true);lab.position.copy(mid);lab.position.y+=1.4;lab.material.opacity=1;g.add(lab);return g;} [[0,1],[1,2],[0,2]].forEach(([i,j])=>orientGroup.add(biArrow(Lp[i],Lp[j])));
+
+    // 3D correlation heatmap
+    const blockNames=['Q72 Worry','Q74 MistrustA','Q75 MistrustB','Q85 Defences','Q94 Halluc','Q101 SocAnx','SLEEP','Q87 NegSelf'];
+    const corrMatrix=[[1.00,.36,.30,.26,.14,.41,.35,.40],[.36,1.00,.75,.50,.20,.42,.29,.44],[.30,.75,1.00,.56,.20,.39,.31,.46],[.26,.50,.56,1.00,.24,.47,.32,.45],[.14,.20,.20,.24,1.00,.21,.15,.13],[.41,.42,.39,.47,.21,1.00,.35,.50],[.35,.29,.31,.32,.15,.35,1.00,.34],[.40,.44,.46,.45,.13,.50,.34,1.00]];
+    const corrObjects=[]; function corrColor(value){const low=new THREE.Color(0x472777),mid=new THREE.Color(0x2a9d8f),high=new THREE.Color(0xf4d35e);return value<.5?low.clone().lerp(mid,value/.5):mid.clone().lerp(high,(value-.5)/.5);} function makeTextSprite(text,size=18,color='#16243f',bold=false){return labelSprite(text,size,bold,color);}
+    function buildCorrelationHeatmap3D(){const n=corrMatrix.length,spacing=4.2,size=3.6,start=-((n-1)*spacing)/2;const title=makeTextSprite('Spearman correlation among block scores after QC',28,'#16243f',true);title.position.set(0,19,0);title.material.opacity=1;corrGroup.add(title);for(let i=0;i<n;i++){const rowLabel=makeTextSprite(blockNames[i],15,'#34445d',true);rowLabel.position.set(start-7.2,start+(n-1-i)*spacing,0);rowLabel.material.opacity=1;corrGroup.add(rowLabel);const colLabel=makeTextSprite(blockNames[i],15,'#34445d',true);colLabel.position.set(start+i*spacing,start-5.8,0);colLabel.rotation.z=-Math.PI/4;colLabel.material.opacity=1;corrGroup.add(colLabel);}for(let i=0;i<n;i++){for(let j=0;j<n;j++){const value=corrMatrix[i][j],height=.35+value*5.6;const cube=new THREE.Mesh(new THREE.BoxGeometry(size,size,height),new THREE.MeshPhongMaterial({color:corrColor(value),shininess:45,transparent:true,opacity:.94}));const x=start+j*spacing,y=start+(n-1-i)*spacing;cube.position.set(x,y,height/2);cube.userData={kind:'corr',row:blockNames[i],col:blockNames[j],value};corrGroup.add(cube);corrObjects.push(cube);const valueLabel=makeTextSprite(value.toFixed(2),13,'#111827',value>=.7);valueLabel.position.set(x,y,height+.35);valueLabel.material.opacity=1;corrGroup.add(valueLabel);}}const note=makeTextSprite('Height and colour both encode correlation strength',16,'#5a6b86',false);note.position.set(0,-20.5,0);note.material.opacity=1;corrGroup.add(note);} buildCorrelationHeatmap3D();
+
+    // animation state
+    let qi=0,lastReveal=0,building=false;const STEP=90;function startBuild(){qi=0;building=true;lastReveal=performance.now();allNodes.forEach(n=>{n.visible=false;n.scale.setScalar(.001);n.userData.appear=-1;n.material.opacity=1;});allLabels.forEach(l=>{l.material.opacity=0;l.userData.appear=-1;});allEdges.forEach(e=>{e.visible=false;e.material.opacity=0;e.userData.appear=-1;});deselect();clearFocus();} function revealNext(){if(qi>=reveal.length){building=false;return;} const r=reveal[qi++];if(r.node){r.node.visible=true;r.node.userData.appear=0;if(r.node.userData.label)r.node.userData.label.userData.appear=0;} if(r.edge){r.edge.visible=true;r.edge.userData.appear=0;}}
+
+    let focus=null,searchTerm='',labelMode='auto',viewMode='structure';const offClusters=new Set(); function match(n){if(!searchTerm)return true;return (n.userData.short+' '+n.userData.full).toLowerCase().includes(searchTerm);} function wantLabel(n){const u=n.userData;if(u.label&&u.label.userData.appear<0)return 0;if(u.cluster!=='__lat'&&offClusters.has(u.cluster))return 0;if(focus&&u.cluster!==focus)return 0;if(u.kind==='latent')return 1;if(searchTerm)return match(n)?1:0;if(labelMode==='all')return 1;return n===hovered||n===selected?1:0;} function refreshLabels(){if(building)return;allNodes.forEach(n=>{if(n.userData.label)n.userData.label.material.opacity=wantLabel(n);});}
+    function applyVisibility(){allNodes.forEach(n=>{const u=n.userData;const legendHidden=u.kind!=='latent'&&offClusters.has(u.cluster);const focusDim=focus&&u.cluster!==focus;const searchDim=searchTerm&&u.kind==='item'&&!match(n);const op=legendHidden?.04:focusDim?.1:searchDim?.08:1;n.material.opacity=op;n.material.depthWrite=op>.5;n.material.emissiveIntensity=searchTerm&&match(n)&&u.kind==='item'?.55:.15;});allEdges.forEach(e=>{const u=e.userData;const legendHidden=u.cluster!=='__inter'&&offClusters.has(u.cluster);const focusDim=focus&&u.cluster!==focus&&u.cluster!=='__inter';e.material.opacity=(legendHidden?0:focusDim?.05:u.base)*(u.appear<0?0:1);});refreshLabels();} function setFocus(c){focus=focus===c?null:c;zoomTarget=focus?46:70;applyVisibility();} function clearFocus(){focus=null;zoomTarget=70;applyVisibility();}
+
+    document.querySelectorAll('.lg').forEach(el=>el.addEventListener('click',()=>{const c=el.dataset.c;if(c==='__lat')return;if(offClusters.has(c)){offClusters.delete(c);el.classList.remove('off');}else{offClusters.add(c);el.classList.add('off');}applyVisibility();})); document.getElementById('search').addEventListener('input',e=>{searchTerm=e.target.value.trim().toLowerCase();applyVisibility();});
+    const banner=document.getElementById('banner'),bEl=banner.querySelector('.b');function showBanner(text,big){bEl.textContent=text;bEl.classList.toggle('big',!!big);banner.classList.add('show');} function hideBanner(){banner.classList.remove('show');}
+    let pulse=false,stage='measurement';function setStage(s){stage=s;document.querySelectorAll('.step').forEach(st=>st.classList.toggle('active',st.dataset.stage===s)); if(viewMode==='corr')return; if(s==='measurement'){orientGroup.visible=false;pulse=false;showBanner('1 First, we check measurement: items cluster clearly around three latent dimensions.');}else if(s==='orientation'){orientGroup.visible=true;pulse=false;showBanner('2 Next, IL2H / LiNGLaH-style orientation and rank constraints ask whether one dimension comes directionally before another.');}else if(s==='result'){orientGroup.visible=true;pulse=true;showBanner('3 The orientation does not stabilise: interpret parallel dimensions, not a hierarchy.',true);}else{orientGroup.visible=false;pulse=false;hideBanner();}}
+    document.querySelectorAll('.step').forEach(st=>st.addEventListener('click',()=>{tourToken++;setViewMode('structure');setStage(st.dataset.stage);}));let tourToken=0;function wait(ms){return new Promise(resolve=>setTimeout(resolve,ms));} async function playTour(loop){const me=++tourToken;setViewMode('structure');do{rx=0;ry=0;zoomTarget=70;clearFocus();pinned=false;tip.style.opacity=0;startBuild();setStage('measurement');await wait(4200);if(me!==tourToken)return;setStage('orientation');zoomTarget=58;await wait(4200);if(me!==tourToken)return;setStage('result');await wait(5000);if(me!==tourToken)return;setStage('free');if(loop){await wait(6000);if(me!==tourToken)return;}}while(loop);} document.getElementById('play').addEventListener('click',()=>playTour(false));
+
+    const ray=new THREE.Raycaster(),mouse=new THREE.Vector2(),tip=document.getElementById('tip');let hovered=null,mx=0,my=0,pinned=false;function positionTip(){if(tip.style.opacity==='0')return;const safeTop=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-top')||0);tip.style.left=Math.max(8,Math.min(mx+14,viewportW()-tip.offsetWidth-10))+'px';tip.style.top=Math.max(8+safeTop,Math.min(my+14,viewportH()-tip.offsetHeight-10))+'px';}
+    function showTipFor(o){const u=o.userData;if(u.kind==='corr'){tip.innerHTML='<div class="ttl">'+u.row+' × '+u.col+'</div><div>Spearman correlation after QC: <b>'+u.value.toFixed(2)+'</b></div><div class="meta">3D heatmap block · height and colour encode correlation strength</div>';tip.style.opacity=1;tip.style.pointerEvents=pinned?'auto':'none';positionTip();return;} let html='<div class="ttl">'+u.short+'</div><div>'+u.full+'</div><div class="meta">'+(u.kind==='latent'?'latent construct':'item · '+latents[u.cluster].label)+'</div>'; if(u.loading!==undefined)html+='<span class="load">factor loading '+u.loading.toFixed(2)+'</span>'; if(u.scale)html+='<div class="meta">scale: '+u.scale+'</div>';tip.innerHTML=html;tip.style.opacity=1;tip.style.pointerEvents=pinned?'auto':'none';positionTip();}
+    function pick(){ray.setFromCamera(mouse,camera);const objects=viewMode==='corr'?corrObjects:pickable.filter(n=>n.visible&&n.material.opacity>.3);const hits=ray.intersectObjects(objects);return hits.length?hits[0].object:null;} let hlEdges=[];function clearHL(){hlEdges.forEach(e=>e.material.color.setHex(0x111111));hlEdges=[];applyVisibility();} function setHL(node){if(node.userData.kind==='corr')return;clearHL();const edges=node.userData.kind==='item'?node.userData.edges:allEdges.filter(e=>e.userData.cluster===node.userData.cluster);edges.forEach(e=>{e.material.color.setHex(node.userData.color);e.material.opacity=.95;});hlEdges=edges;}
+    function updateHover(){if(pinned)return;const h=pick();if(h!==hovered){if(hovered){if(hovered.userData.kind==='corr')hovered.scale.setScalar(1);else hovered.scale.setScalar(hovered.userData.target);}hovered=h;if(hovered){if(hovered.userData.kind==='corr')hovered.scale.setScalar(1.08);else hovered.scale.setScalar(hovered.userData.target*1.4);showTipFor(hovered);setHL(hovered);}else{tip.style.opacity=0;clearHL();}} if(hovered)positionTip();}
+    function makeRing(){const s=128,cv=document.createElement('canvas');cv.width=s;cv.height=s;const c=cv.getContext('2d');c.strokeStyle='#fff';c.lineWidth=9;c.beginPath();c.arc(s/2,s/2,s/2-11,0,Math.PI*2);c.stroke();const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthTest:false}));sp.visible=false;group.add(sp);return sp;} const ring=makeRing();let selected=null;function showRing(n){ring.visible=true;ring.position.copy(n.position);const s=n.userData.radius*3.4;ring.scale.set(s,s,1);ring.material.color.setHex(n.userData.color);} function hideRing(){ring.visible=false;} function selectNode(node,fromList){if(node.userData.kind==='corr'){showTipFor(node);pinned=true;return;}deselect();selected=node;pinned=true;hovered=node;node.scale.setScalar(node.userData.target*1.5);showTipFor(node);const x=document.createElement('span');x.className='x';x.textContent='×';x.addEventListener('click',deselect);tip.appendChild(x);tip.style.pointerEvents='auto';if(fromList){mx=viewportW()/2-140;my=120;zoomTarget=Math.max(46,zoomTarget-6);positionTip();}setHL(node);showRing(node);if(node.userData.kind==='latent')setFocus(node.userData.cluster);} function deselect(){if(selected){selected.scale.setScalar(selected.userData.target);selected=null;}pinned=false;hovered=null;tip.style.opacity=0;tip.style.pointerEvents='none';hideRing();clearHL();}
+
+    function buildBrowser(){const names={Worry:'Worry Q72',MistrustA:'Mistrust A Q74',Persecution:'Persecution Q75'},hex={Worry:'#2e6da4',MistrustA:'#3d8b5f',Persecution:'#d98032'};let html='';['Worry','MistrustA','Persecution'].forEach(k=>{html+='<div class="grp"><div class="gh" style="background:'+hex[k]+'">'+names[k]+'</div>';itemNodeList.filter(o=>o.cluster===k).forEach((o,idx)=>{html+='<button class="it" type="button" data-k="'+k+'" data-i="'+idx+'"><b>'+o.short+'</b><span class="q">'+o.full+'</span></button>';});html+='</div>';});const body=document.getElementById('browserBody');body.innerHTML=html;body.querySelectorAll('.it').forEach(btn=>btn.addEventListener('click',()=>{const arr=itemNodeList.filter(x=>x.cluster===btn.dataset.k),o=arr[+btn.dataset.i];if(o){tourToken++;setViewMode('structure');setStage('free');selectNode(o.node,true);closeAllPanels();}}));} buildBrowser();
+    function closeAllPanels(){['browser','algorithmPanel'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('open');});document.getElementById('panelBackdrop').classList.remove('open');} function toggleSinglePanel(id){const panel=document.getElementById(id);if(!panel)return;const alreadyOpen=panel.classList.contains('open');closeAllPanels();if(!alreadyOpen){panel.classList.add('open');document.getElementById('panelBackdrop').classList.add('open');}}
+    document.getElementById('browseBtn').addEventListener('click',()=>toggleSinglePanel('browser'));document.getElementById('browserClose').addEventListener('click',closeAllPanels);document.getElementById('algorithmBtn').addEventListener('click',()=>toggleSinglePanel('algorithmPanel'));document.getElementById('algorithmClose').addEventListener('click',closeAllPanels);document.getElementById('panelBackdrop').addEventListener('click',closeAllPanels);document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAllPanels();});
+    let hintsGone=false;function fadeHints(){if(hintsGone)return;hintsGone=true;const h=document.getElementById('hints');if(h){h.style.opacity='0';setTimeout(()=>h.style.display='none',600);}}
+    let spin=true,dragging=false,moved=false,px=0,py=0,rx=0,ry=0,vx=0,vy=0,zoomTarget=70,lastTouchDist=0;
+    function setViewMode(mode){viewMode=mode;const modeLabel=document.getElementById('modeLabel'),corrBtn=document.getElementById('corrBtn');if(mode==='corr'){closeAllPanels();group.visible=false;corrGroup.visible=true;orientGroup.visible=false;zoomTarget=62;rx=-.75;ry=.72;if(modeLabel)modeLabel.textContent='3D Spearman correlation heatmap among block scores after QC';if(corrBtn)corrBtn.classList.add('active');showBanner('3D correlation heatmap: taller blocks and warmer colours indicate stronger Spearman correlations.',false);}else{corrGroup.visible=false;group.visible=true;zoomTarget=70;rx=0;ry=0;if(modeLabel)modeLabel.textContent='Latent-item structure';if(corrBtn)corrBtn.classList.remove('active');setStage(stage||'measurement');}}
+    document.getElementById('corrBtn').addEventListener('click',()=>setViewMode(viewMode==='corr'?'structure':'corr'));
+    document.getElementById('spinbtn').addEventListener('click',function(){spin=!spin;this.textContent=spin?'⏸':'▶';}); document.getElementById('reset').addEventListener('click',()=>{setViewMode('structure');tourToken++;rx=0;ry=0;vx=0;vy=0;zoomTarget=70;clearFocus();searchTerm='';pinned=false;tip.style.opacity=0;document.getElementById('search').value='';offClusters.clear();document.querySelectorAll('.lg').forEach(e=>e.classList.remove('off'));applyVisibility();}); document.getElementById('help').addEventListener('click',()=>{document.getElementById('intro').style.display='flex';}); document.getElementById('labelsBtn').addEventListener('click',function(){labelMode=labelMode==='auto'?'all':'auto';this.classList.toggle('active',labelMode==='all');refreshLabels();}); document.getElementById('share').addEventListener('click',function(){const b=this,old=b.textContent;if(navigator.clipboard){navigator.clipboard.writeText(location.href).then(()=>{b.textContent='✓';setTimeout(()=>b.textContent=old,1200);});}}); document.getElementById('go').addEventListener('click',()=>{document.getElementById('intro').style.display='none';playTour(false);setTimeout(fadeHints,7500);});
+    const cvs=renderer.domElement;cvs.addEventListener('pointerdown',e=>{if(e.isPrimary===false)return;e.preventDefault();cvs.setPointerCapture&&cvs.setPointerCapture(e.pointerId);dragging=true;moved=false;px=e.clientX;py=e.clientY;vx=0;vy=0;fadeHints();},{passive:false}); window.addEventListener('pointerup',e=>{if(!dragging)return;dragging=false;if(!moved){mouse.x=e.clientX/viewportW()*2-1;mouse.y=-(e.clientY/viewportH())*2+1;const hit=pick();if(hit)selectNode(hit,false);else deselect();}}); window.addEventListener('pointermove',e=>{mx=e.clientX;my=e.clientY;mouse.x=e.clientX/viewportW()*2-1;mouse.y=-(e.clientY/viewportH())*2+1;if(!dragging)return;e.preventDefault();const dx=e.clientX-px,dy=e.clientY-py;if(Math.abs(dx)+Math.abs(dy)>3)moved=true;ry+=dx*.006;rx+=dy*.006;rx=Math.max(-1.25,Math.min(1.25,rx));vy=dx*.0009;vx=dy*.0009;px=e.clientX;py=e.clientY;},{passive:false}); cvs.addEventListener('wheel',e=>{e.preventDefault();zoomTarget+=e.deltaY*.035;zoomTarget=Math.max(34,Math.min(100,zoomTarget));fadeHints();},{passive:false}); cvs.addEventListener('touchmove',e=>{if(e.touches.length===2){e.preventDefault();const a=e.touches[0],b=e.touches[1],d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);if(lastTouchDist){zoomTarget+=(lastTouchDist-d)*.06;zoomTarget=Math.max(34,Math.min(100,zoomTarget));}lastTouchDist=d;}},{passive:false}); cvs.addEventListener('touchend',()=>lastTouchDist=0);
+    function resizeScene(){setVH();camera.aspect=viewportW()/viewportH();camera.updateProjectionMatrix();renderer.setSize(viewportW(),viewportH(),false);renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,isCoarse?1.5:2));} window.addEventListener('resize',resizeScene);if(window.visualViewport)window.visualViewport.addEventListener('resize',resizeScene);window.addEventListener('orientationchange',()=>setTimeout(resizeScene,250));
+    function animate(now){requestAnimationFrame(animate);if(building&&now-lastReveal>STEP){revealNext();lastReveal=now;}allNodes.forEach(o=>{if(o.userData.appear>=0&&o.userData.appear<1){o.userData.appear=Math.min(1,o.userData.appear+.07);const t=o.userData.appear,eased=t*(2-t);if(o!==hovered)o.scale.setScalar(Math.max(.001,eased*o.userData.target));}});allEdges.forEach(o=>{if(o.userData.appear>=0&&o.userData.appear<1){o.userData.appear=Math.min(1,o.userData.appear+.07);const t=o.userData.appear,eased=t*(2-t);o.material.opacity=eased*o.userData.base;}});allLabels.forEach(l=>{if(l.userData.appear>=0&&l.userData.appear<1){l.userData.appear=Math.min(1,l.userData.appear+.07);l.material.opacity=l.userData.appear;}});if(pulse&&viewMode==='structure'){const p=1+.07*Math.sin(now*.005);for(const k in latNode){if(latNode[k]!==hovered)latNode[k].scale.setScalar(p);}} if(!building)updateHover();if(!building)refreshLabels();if(selected){ring.visible=true;ring.position.copy(selected.position);} camera.position.z+=(zoomTarget-camera.position.z)*.08;if(!dragging){ry+=vy;rx+=vx;vy*=.94;vx*=.94;if(spin&&Math.abs(vy)<.0006&&Math.abs(vx)<.0006)ry+=.0032;} if(viewMode==='corr'){corrGroup.rotation.x=rx;corrGroup.rotation.y=ry;}else{group.rotation.y=ry;group.rotation.x=rx;} renderer.render(scene,camera);}
+    startBuild();setStage('measurement');requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
